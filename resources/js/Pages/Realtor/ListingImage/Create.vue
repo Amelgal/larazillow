@@ -1,0 +1,74 @@
+<template>
+  <Box>
+    <template #header>Upload New Images</template>
+    <form @submit.prevent="upload">
+      <section class="flex items-center gap-2 my-4">
+        <input class="border rounded-md file:px-4 file:py-2 border-gray-200 dark:border-gray-600 file:text-gray-700 file:dark:text-gray-400 file:border-0 file:bg-gray-100 file:dark:bg-gray-800 file:font-medium file:hover:bg-gray-200 file:dark:hover:bg-gray-700 file:hover:cursor-pointer file:mr-4" multiple type="file" @input="addFiles" />
+        <button type="submit" class="btn-outline disabled:opacity-25 disabled:cursor-not-allowed" :disabled="canUpload">Send</button>
+        <button type="reset" @click="reset" class="btn-outline">Reset</button>
+      </section>
+      <div v-if="imageErrors.length" class="input-error">
+        <div v-for="(error, index) in imageErrors" :key="index">
+          {{ error }}
+        </div>
+      </div>
+    </form>
+  </Box>
+
+  <Box v-if="props.listing.images.length" class="mt-4">
+    <template #header>Current Images</template>
+    <section class="mt-4 grid grid-cols-3 gap-4">
+      <div v-for="image in props.listing.images" :key="image.id" class="flex flex-col justify-between">
+        <img :src="image.url" class="rounded-md"/>
+        <Link :href="route('realtor.listing.image.destroy', {listing: props.listing.id, image: image.id})" method="DELETE" as="button" class="mt-2 btn-outline text-xs">Delete</Link>
+      </div>
+    </section>
+  </Box>
+</template>
+
+<script setup>
+import {computed} from 'vue'
+import Box from '@/Components/UI/Box.vue'
+import {useForm} from '@inertiajs/vue3'
+import NProgress from 'nprogress'
+import { router } from '@inertiajs/vue3'
+import {Link} from '@inertiajs/vue3'
+
+router.on('progress', (event) => {
+  if (event.detail.progress.percentage) {
+    NProgress.set((event.detail.progress.percentage / 100) * 0.9)
+  }
+})
+
+const props = defineProps({ listing: Object })
+
+const form = useForm({
+  images: [],
+})
+
+const imageErrors = computed(() => {
+  reset()
+  return Object.values(form.errors)
+})
+const canUpload = computed(() => form.images.length === 0 )
+
+const upload = () => {
+  form.post(route('realtor.listing.image.store', { listing: props.listing.id }),
+    {
+      preserveScroll: true,
+      onSuccess: () => form.reset('images'),
+    }
+  )
+}
+
+const addFiles = (event) => {
+  for (const image of event.target.files) {
+    form.images.push(image)
+  }
+}
+
+const reset = () => {
+  form.reset('images')
+}
+
+</script>
